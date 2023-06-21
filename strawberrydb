@@ -1,0 +1,182 @@
+import argparse
+import os
+import sys
+
+parser = argparse.ArgumentParser(
+    prog="strawberrydb",
+    description="A simple database format built with Python."
+)
+
+
+parser.add_argument("dbname", help="Name of the database.")
+parser.add_argument("-p", "--path", help="Path of the database to edit", nargs=1)
+methods = parser.add_mutually_exclusive_group(required=True)
+methods.add_argument("-c", "--create", action="store_true", help="Create a new database.")
+methods.add_argument("-e", "--edit", action="store_true", help="Edit an existing database.")
+methods.add_argument("-v", "--view", action="store_true", help="View an existing database.")
+new = parser.add_mutually_exclusive_group()
+new.add_argument("--newcolumn", help="Create a new column with the specified name (-e required)", metavar="NAME")
+new.add_argument("--newentry", help="Create a new entry with the specified values (-e required)", metavar="VALUES")
+args = parser.parse_args()
+
+if not args.path == None:
+    if not os.path.isdir(args.path[0]):
+        print(f"Invalid path! {args.path[0]} was not found on the system.")
+        sys.exit()
+
+if args.edit and (args.newcolumn is None and args.newentry is None):
+    parser.error("--edit requires --newcolumn or --newentry")
+
+def createFile(file_path, placeholder="", silent=True):
+    if not os.path.exists(file_path):
+        with open(file_path,"a+") as f:
+            if not placeholder == "":
+                f.write(placeholder)
+    elif not silent:
+        print("File already exists.")
+        return "FileExistError"
+
+def createDB():
+    if not args.path == None:
+        os.chdir(args.path[0])
+    cwd = os.getcwd()
+    cf1 = createFile(f"{cwd}/{args.dbname}.sdb", placeholder=f"{args.dbname}\n")
+    if cf1 == "FileExistError":
+        print("Database already exists.")
+        sys.exit()
+    print("Database successfully created!")
+    
+
+def flattenList(l):
+    flat_list = []
+    for sublist in l:   
+        for item in sublist:
+            flat_list.append(item)
+    return flat_list
+
+def viewDB():
+    if not args.path == None:
+        os.chdir(args.path[0])
+    cwd = os.getcwd()
+
+    try:
+        f = open(f"{cwd}/{args.dbname}.sdb","r+")
+        rowsUS = f.readlines() # rows unstripped
+        rows = []
+        for row in rowsUS:
+            rows.append(row.strip()) # remove \n
+        databaseSplitBumpy = [] # bumpy, not flat
+        for row in rows:
+            databaseSplitBumpy.append(row.split("|"))
+        databaseSplit = flattenList(databaseSplitBumpy)
+
+        dbname = rows.pop(0)
+        print(f"Viewing database {dbname}\n")
+        columns = rows[0].split("|")
+        longest = max(databaseSplit, key=len)
+        for _ in columns:
+            print("-", end="")
+            for _ in range(len(longest)):
+                print("-", end="")
+        print("-")
+        print("|", end="")
+        for column in columns:
+            print(column, end="")
+            print(" "*(len(longest)-len(column)), end="")
+            print("|", end="")
+        print("")
+        for _ in columns:
+            print("/", end="")
+            for _ in range(len(longest)):
+                print("/", end="")
+        print("/")
+
+        for _ in range(len(columns)+1):
+            databaseSplit.pop(0) # remove column definitions
+        if len(databaseSplit) == 0:
+            return
+        maxLength = len(columns)
+        currentLength = 0
+        print("|", end="")
+        for entry in databaseSplit:
+            if currentLength >= maxLength:
+                print("")
+                for _ in columns:
+                    print("-", end="")
+                    for _ in range(len(longest)):
+                        print("-", end="")
+                print("-\n|", end = "")
+                print(entry, end="")
+                print(" "*(len(longest)-len(entry)), end="")
+                print("|", end="")
+                currentLength=1
+                continue
+            print(entry, end="")
+            print(" "*(len(longest)-len(entry)), end="")
+            print("|", end="")
+            currentLength+=1
+        print("")
+        for _ in columns:
+            print("-", end="")
+            for _ in range(len(longest)):
+                print("-", end="")
+        print("-")
+        rows.pop(0) # remove column definitions
+
+                
+    except FileNotFoundError:
+        print("Database file not found!")
+    except IndexError:
+        print("Database file is empty!")
+    except:
+        print("Database is corrupt or another error occurred!")
+
+def newColumn():
+    if not args.path == None:
+        os.chdir(args.path[0])
+    cwd = os.getcwd()
+    if not os.path.isfile(f"{cwd}/{args.dbname}.sdb"):
+        parser.error("Not a valid database!")
+    
+    f = open(f"{cwd}/{args.dbname}.sdb", "r+")
+    lines = f.readlines()
+    if len(lines) > 1:
+        for i in range(len(lines)):
+            if i == 1:
+                f.write(f"|{args.newcolumn}")
+    else:
+        for i in range(len(lines)+1):
+            if i == 1:
+                f.write(f"{args.newcolumn}")
+    print("New column successfully created!")
+
+
+
+def newEntry():
+    if not args.path == None:
+        os.chdir(args.path[0])
+    cwd = os.getcwd()
+    if not os.path.isfile(f"{cwd}/{args.dbname}.sdb"):
+        parser.error("Not a valid database!")
+    
+    f = open(f"{cwd}/{args.dbname}.sdb", "a")
+    values = args.newentry
+    readyValues = values.replace(",", "|")
+    f.write(f"\n{readyValues}")
+    print("New entry successfully created!")
+
+
+if args.create:
+    createDB()
+
+if args.view:
+    viewDB()
+
+if args.edit:
+    if args.newcolumn != None:
+        newColumn()
+    else:
+        newEntry()
+
+
+
