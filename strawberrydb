@@ -14,6 +14,7 @@ methods = parser.add_mutually_exclusive_group(required=True)
 methods.add_argument("-c", "--create", action="store_true", help="Create a new database.")
 methods.add_argument("-e", "--edit", action="store_true", help="Edit an existing database.")
 methods.add_argument("-v", "--view", action="store_true", help="View an existing database.")
+methods.add_argument("-d", "--delete", action="store_true", help="Delete an existing database.")
 new = parser.add_mutually_exclusive_group()
 new.add_argument("--newcolumn", help="Create a new column with the specified name (-e required)", metavar="NAME")
 new.add_argument("--newentry", help="Create a new entry with the specified values (-e required)", metavar="VALUES")
@@ -166,6 +167,22 @@ def newEntry():
     print("New entry successfully created!")
 
 
+def deleteDB():
+    if not args.path == None:
+        os.chdir(args.path[0])
+    cwd = os.getcwd()
+    if not os.path.isfile(f"{cwd}/{args.dbname}.sdb"):
+        parser.error("Not a valid database!")
+
+    print("Are you sure you want to delete this database?")
+    try:
+        input("Enter to delete, ^C to cancel\n")
+    except KeyboardInterrupt:
+        print("Cancelled database deletion.")
+        sys.exit()
+    os.remove(f"{cwd}/{args.dbname}.sdb")
+    print("Database deleted successfully!")
+
 if args.create:
     createDB()
 
@@ -177,6 +194,9 @@ if args.edit:
         newColumn()
     else:
         newEntry()
+
+if args.delete:
+    deleteDB()
 
 
 
