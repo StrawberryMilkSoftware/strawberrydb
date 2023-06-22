@@ -21,3 +21,4 @@ The `username|id|moneySpent|currentGiftCardCredit` are the names of all the colu
 
 The rest of the lines are entries, which are the actual data in the database. They relate to the columns, like a spreadsheet.
 
+For example, in entry #1, the username is `admin` because `admin` is in the same column as `username`.
